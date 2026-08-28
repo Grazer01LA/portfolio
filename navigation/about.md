@@ -14,7 +14,7 @@ I am Ishan Khandelwal, a San Diego student who enjoys learning, staying active, 
 ### Education
 
 - Elementary and middle school at Design 39 Campus in San Diego
-![Ishan's 8th grade graduation]({{site.baseurl}}/images/about/20250612_103435.jpg)
+![Ishan's 8th grade graduation]({{site.baseurl}}/images/about/20250612_103439.jpg)
 - High school at Del Norte High School in San Diego
 
 ### San Diego
