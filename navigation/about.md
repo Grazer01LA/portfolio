@@ -25,7 +25,7 @@ I have lived in both 4S Ranch and Black Mountain Ranch.
 I like the beach, the San Diego Zoo and Safari Park, and Sea World.
 ### Languages
 
-I speak English and Hindi.
+I speak English and Hindi. I did HLP hindi.
 
 ### Interests
 
