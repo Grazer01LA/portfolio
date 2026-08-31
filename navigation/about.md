@@ -32,8 +32,10 @@ I speak English and Hindi.
 I love to ski and I've been to 6 different resorts and skied 29 days. I have skied many double blacks, with my hardest ski run being Think Again at Banff Sunshine Village. My favorite ski resort is Lake Louise.
 I also play video games and tennis.
 I enjoy watching F1 and soccer.
+![Ishan at F1]({{site.baseurl}}/images/about/20251018_115108.heic)
 I love the travel based game show Jet Lag: The Game.
 I love to travel, and have been to 19 countries and 16 states. Some of my favorite destinations are Norway, Austria, Switzerland, and Yukon.
+![Ishan traveling]({{site.baseurl}}/images/about/20230705_084248.jpg)
 I used to love rubiks cubing, and could solve it in an average of 15 seconds.
 I also like to play video games, and currently mostly play geometry dash, brawl stars, F1, and FIFA.
  I used to play many other games like minecraft and among us.
