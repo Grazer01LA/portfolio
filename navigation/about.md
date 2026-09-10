@@ -118,4 +118,5 @@ Gallery of Pics
 <div class="image-gallery">
   <img src="{{site.baseurl}}/images/about/screenshot_at_7_75_seconds.png" alt="Ishan skiing">
   <img src="{{site.baseurl}}/images/about/20230705_084248.jpg" alt="Ishan traveling">
+  <img src="{{site.baseurl}}/images/about/hot_air_balloon.jpg" alt="Ishan family hot air balloon">
 </div>
