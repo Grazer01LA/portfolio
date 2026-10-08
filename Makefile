@@ -6,10 +6,6 @@ PYTHON := venv/bin/python3
 SHELL = /bin/bash -c
 .SHELLFLAGS = -e
 
-NOTEBOOK_FILES := $(shell find _notebooks -name '*.ipynb')
-DESTINATION_DIRECTORY = _posts
-MARKDOWN_FILES := $(patsubst _notebooks/%.ipynb,$(DESTINATION_DIRECTORY)/%_IPYNB_2_.md,$(NOTEBOOK_FILES))
-
 ###########################################
 # Project Selection Logic
 ###########################################
@@ -25,6 +21,7 @@ DEV_PROJECTS := $(shell grep -v '^\#' $(PROJECT_FILE) 2>/dev/null | grep -v '^$$
 # Known top-level targets (add to this if needed)
 KNOWN_TARGETS := \
 	default dev serve build clean stop reload refresh help \
+	deploy \
 	serve-minima serve-cayman serve-yat serve-so-simple serve-hydejack \
 	build-minima build-cayman build-yat build-so-simple \
 	convert convert-docx convert-docx-config convert-single convert-registered-notebooks \
@@ -240,7 +237,7 @@ build-cayman: use-cayman build-current
 build-so-simple: use-so-simple build-current
 build-yat: use-yat build-current
 
-build-current: clean convert split-courses
+build-current: clean build-registered-projects build-registered-docs convert split-courses
 	@bundle install
 	@bundle exec jekyll clean
 	@bundle exec jekyll build
@@ -248,6 +245,7 @@ build-current: clean convert split-courses
 # General serve/build for whatever is current
 serve: serve-current
 build: build-current
+deploy: build
 
 # Multi-course file splitting
 split-courses:
@@ -259,10 +257,8 @@ clean-courses:
 	@python3 scripts/split_multi_course_files.py clean
 
 # Notebook and DOCX conversion
-convert: $(MARKDOWN_FILES) convert-docx
-$(DESTINATION_DIRECTORY)/%_IPYNB_2_.md: _notebooks/%.ipynb
-	@mkdir -p $(@D)
-	@$(PYTHON) -c "from scripts.convert_notebooks import convert_notebooks; convert_notebooks()"
+convert: convert-docx
+	@$(PYTHON) scripts/convert_notebooks.py
 
 # Single notebook conversion (faster for development)
 convert-single:
@@ -532,6 +528,7 @@ help:
 	@echo "  make dev p1 p2    - Include multiple projects"
 	@echo "  make serve        - Convert and serve (no auto-convert watching)"
 	@echo "  make build        - Convert and build _site/ for deployment (no server)"
+	@echo "  make deploy       - Build _site/ for deployment (publishing is handled by GitHub Pages)"
 	@echo "  make stop         - Stop server and logging"
 	@echo "  make reload       - Stop and restart server"
 	@echo "  make refresh      - Stop, clean, and restart server"

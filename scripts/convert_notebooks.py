@@ -11,7 +11,7 @@ import concurrent.futures, traceback, re
 from dataclasses import dataclass, asdict
 from typing import Any, Optional
 
-if __name__ == "__main__":
+if __package__ in (None, ""):
     from progress_bar import ProgressBar
 else:
     from scripts.progress_bar import ProgressBar
@@ -61,6 +61,8 @@ Notes on CodeFence and MermaidGraph:
 """
 
 notebook_directory = "_notebooks"
+homework_notebook_directory = "_projects/lessons/python/notebooks"
+notebook_directories = (notebook_directory, homework_notebook_directory)
 destination_directory = "_posts"
 mermaid_output_directory = "assets/mermaid"
 
@@ -614,8 +616,7 @@ class MermaidGraph:
 
 def error_cleanup(notebook_file):
     """Delete generated markdown output for a notebook when conversion fails."""
-    destination_file = os.path.basename(notebook_file).replace(".ipynb", "_IPYNB_2_.md")
-    destination_path = os.path.join(destination_directory, destination_file)
+    destination_path = get_relative_output_path(notebook_file)
 
     if os.path.exists(destination_path):
         os.remove(destination_path)
@@ -637,12 +638,19 @@ def extract_front_matter(notebook_file, cell):
 
 
 def get_relative_output_path(notebook_file):
-    """Map a notebook path to the mirrored markdown output path under _posts."""
-    relative_path = os.path.relpath(notebook_file, notebook_directory)
+    """Map supported notebook source trees to mirrored markdown paths under _posts."""
+    absolute_path = os.path.abspath(notebook_file)
+    for source_directory in notebook_directories:
+        absolute_directory = os.path.abspath(source_directory)
+        if os.path.commonpath((absolute_path, absolute_directory)) == absolute_directory:
+            relative_path = os.path.relpath(absolute_path, absolute_directory)
+            output_directory = destination_directory
+            if source_directory == homework_notebook_directory:
+                output_directory = os.path.join(destination_directory, "python-homework")
+            markdown_filename = relative_path.replace(".ipynb", "_IPYNB_2_.md")
+            return os.path.join(output_directory, markdown_filename)
 
-    markdown_filename = relative_path.replace(".ipynb", "_IPYNB_2_.md")
-
-    return os.path.join(destination_directory, markdown_filename)
+    raise ValueError(f"Notebook is outside supported source directories: {notebook_file}")
 
 
 def fix_js_code_blocks(markdown):
@@ -654,6 +662,41 @@ def fix_js_code_blocks(markdown):
     pattern2 = re.compile(r"```python\r?\n%%js\r?\n", re.MULTILINE)
     markdown = pattern2.sub("```javascript\n%%js\n", markdown)
     return markdown
+
+
+def protect_liquid_in_code_fences(markdown):
+    """Keep Liquid-like examples inside notebook code fences from being evaluated."""
+    lines = markdown.splitlines(keepends=True)
+    result = []
+    fence_lines = []
+    fence_marker = None
+
+    for line in lines:
+        if fence_marker is None:
+            opening = re.match(r"^\s*(`{3,}|~{3,})", line)
+            if opening:
+                fence_marker = opening.group(1)
+                fence_lines = [line]
+            else:
+                result.append(line)
+            continue
+
+        fence_lines.append(line)
+        closing = re.match(
+            rf"^\s*{re.escape(fence_marker[0])}{{{len(fence_marker)},}}[ \t]*$",
+            line.rstrip("\r\n"),
+        )
+        if closing:
+            code = "".join(fence_lines[1:-1])
+            if "{{" in code or "{%" in code:
+                result.extend(("{% raw %}\n", *fence_lines, "{% endraw %}\n"))
+            else:
+                result.extend(fence_lines)
+            fence_lines = []
+            fence_marker = None
+
+    result.extend(fence_lines)
+    return "".join(result)
 
 
 def classify_custom_cell_type(cell) -> Optional[str]:
@@ -1060,15 +1103,14 @@ def convert_notebook_to_markdown_with_front_matter(notebook_file):
         exporter = MarkdownExporter()
         markdown, _ = exporter.from_notebook_node(notebook)
         markdown = fix_js_code_blocks(markdown) # Fix JS code blocks
+        markdown = protect_liquid_in_code_fences(markdown)
         
         # Inject code-runner includes (and submit buttons if challenge_submit is enabled)
         markdown = inject_code_runners(markdown, notebook, front_matter)
         
-        front_matter_content = (
-            "---\n"
-            + "\n".join(f"{key}: {value}" for key, value in front_matter.items())
-            + "\n---\n\n"
-        )
+        front_matter_content = "---\n" + yaml.safe_dump(
+            front_matter, sort_keys=False, allow_unicode=True
+        ) + "---\n\n"
         markdown_with_front_matter = front_matter_content + markdown
         destination_path = get_relative_output_path(notebook_file)
         ensure_directory_exists(destination_path)
@@ -1100,16 +1142,21 @@ def process_notebook(notebook_file):
 
 def convert_notebooks():
     """Convert all notebooks in parallel while reporting progress."""
-    maxCores = os.cpu_count()  # get the number of cores available on the system
-
-    notebook_files = glob.glob(f"{notebook_directory}/**/*.ipynb", recursive=True)
+    notebook_files = [
+        notebook_file
+        for source_directory in notebook_directories
+        for notebook_file in glob.glob(f"{source_directory}/**/*.ipynb", recursive=True)
+    ]
+    if not notebook_files:
+        return
+    max_cores = min(os.cpu_count() or 1, len(notebook_files), 8)
 
     # create progress bar
     convertBar = ProgressBar(
         userInfo="Notebook conversion progress:", total=(len(notebook_files))
     )
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=maxCores) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_cores) as executor:
         futures = {
             executor.submit(process_notebook, notebook_file): notebook_file
             for notebook_file in notebook_files
@@ -1124,7 +1171,14 @@ def convert_notebooks():
                     f"Error occurred during notebook processing: {notebook_file}\n{traceback.format_exc()}"
                 )
             finally:
-                rel_path = os.path.relpath(notebook_file, notebook_directory)
+                source_directory = next(
+                    directory
+                    for directory in notebook_directories
+                    if os.path.commonpath(
+                        (os.path.abspath(notebook_file), os.path.abspath(directory))
+                    ) == os.path.abspath(directory)
+                )
+                rel_path = os.path.relpath(notebook_file, source_directory)
                 convertBar.set_suffix(rel_path)
                 convertBar.continue_progress()
 
