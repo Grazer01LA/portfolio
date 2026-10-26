@@ -1,6 +1,6 @@
 # SASS homework notebooks
 
-Completed Jupyter notebooks for SASS Popcorn Hacks, homework, and multiple-choice checks.
+Completed Jupyter notebooks for the SASS lesson Popcorn Hacks and homework. Only Grids includes an MCQ check.
 
 | Lesson | Notebook |
 | --- | --- |
